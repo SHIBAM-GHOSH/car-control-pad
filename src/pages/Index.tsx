@@ -1,10 +1,9 @@
 import { useState, useCallback } from "react";
-import { OctagonX, Settings, Plug } from "lucide-react";
+import { Settings, Plug } from "lucide-react";
 import Joystick from "@/components/Joystick";
 import SpeedGauge from "@/components/SpeedGauge";
 import ControlButton from "@/components/ControlButton";
 import ConnectionStatus from "@/components/ConnectionStatus";
-import DirectionIndicator from "@/components/DirectionIndicator";
 
 const Index = () => {
   const [steering, setSteering] = useState(0);
@@ -83,12 +82,12 @@ const Index = () => {
         </div>
 
         {/* Center panel */}
-        <div className="flex flex-col items-center gap-4">
+        <div className="flex flex-col items-center gap-2">
+          {/* Connection status indicator */}
+          <ConnectionStatus status={connectionStatus} deviceName="Arduino Car" />
+
           {/* Speed gauge */}
           <SpeedGauge speed={speed} size={140} />
-
-          {/* Direction indicator */}
-          <DirectionIndicator steering={steering} throttle={throttle} />
 
           {/* Connect button */}
           <ControlButton
@@ -96,7 +95,7 @@ const Index = () => {
             label={connectionStatus === "connected" ? "Disconnect" : connectionStatus === "connecting" ? "Connecting" : "Connect"}
             active={connectionStatus === "connected"}
             onPress={handleConnect}
-            size="md"
+            size="lg"
           />
         </div>
 
@@ -115,19 +114,6 @@ const Index = () => {
           </div>
         </div>
       </main>
-
-      {/* Emergency stop button - fixed bottom center */}
-      <div className="absolute bottom-4 left-1/2 -translate-x-1/2">
-        <ControlButton
-          icon={OctagonX}
-          label="E-Stop"
-          variant="danger"
-          active={emergencyStop}
-          onPress={() => setEmergencyStop(true)}
-          onRelease={() => setEmergencyStop(false)}
-          size="lg"
-        />
-      </div>
 
       {/* Status bar at bottom */}
       <div className="absolute bottom-3 left-4 right-4 flex justify-between items-center pointer-events-none">
