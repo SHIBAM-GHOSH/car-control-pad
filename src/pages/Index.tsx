@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { Volume2, Lightbulb, OctagonX, Settings } from "lucide-react";
+import { OctagonX, Settings, Plug } from "lucide-react";
 import Joystick from "@/components/Joystick";
 import SpeedGauge from "@/components/SpeedGauge";
 import ControlButton from "@/components/ControlButton";
@@ -9,10 +9,20 @@ import DirectionIndicator from "@/components/DirectionIndicator";
 const Index = () => {
   const [steering, setSteering] = useState(0);
   const [throttle, setThrottle] = useState(0);
-  const [hornActive, setHornActive] = useState(false);
-  const [lightsActive, setLightsActive] = useState(false);
   const [emergencyStop, setEmergencyStop] = useState(false);
-  const [connectionStatus] = useState<"connected" | "connecting" | "disconnected">("connected");
+  const [connectionStatus, setConnectionStatus] = useState<"connected" | "connecting" | "disconnected">("disconnected");
+
+  const handleConnect = useCallback(() => {
+    if (connectionStatus === "disconnected") {
+      setConnectionStatus("connecting");
+      // Simulate connection delay
+      setTimeout(() => {
+        setConnectionStatus("connected");
+      }, 1500);
+    } else if (connectionStatus === "connected") {
+      setConnectionStatus("disconnected");
+    }
+  }, [connectionStatus]);
 
   const handleSteeringMove = useCallback((x: number, _y: number) => {
     setSteering(x);
@@ -80,24 +90,14 @@ const Index = () => {
           {/* Direction indicator */}
           <DirectionIndicator steering={steering} throttle={throttle} />
 
-          {/* Control buttons row */}
-          <div className="flex items-center gap-4">
-            <ControlButton
-              icon={Volume2}
-              label="Horn"
-              active={hornActive}
-              onPress={() => setHornActive(true)}
-              onRelease={() => setHornActive(false)}
-              size="sm"
-            />
-            <ControlButton
-              icon={Lightbulb}
-              label="Lights"
-              active={lightsActive}
-              onPress={() => setLightsActive(!lightsActive)}
-              size="sm"
-            />
-          </div>
+          {/* Connect button */}
+          <ControlButton
+            icon={Plug}
+            label={connectionStatus === "connected" ? "Disconnect" : connectionStatus === "connecting" ? "Connecting" : "Connect"}
+            active={connectionStatus === "connected"}
+            onPress={handleConnect}
+            size="md"
+          />
         </div>
 
         {/* Right joystick - Throttle */}
