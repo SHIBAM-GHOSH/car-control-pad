@@ -1,85 +1,99 @@
-import { useState, useEffect } from "react";
-import SlamScene from "@/components/slam/SlamScene";
-import SlamOverlay from "@/components/slam/SlamOverlay";
+import { useState, useEffect, useCallback } from "react";
+import SlamMapScene from "@/components/slam/SlamMapScene";
+import SlamHUD from "@/components/slam/SlamHUD";
 
 const SlamViewer = () => {
   const [distanceTraveled, setDistanceTraveled] = useState(0);
   const [trackingStatus, setTrackingStatus] = useState<"Tracking" | "Loop Closure" | "Lost">("Tracking");
-  const [roverPosition, setRoverPosition] = useState<[number, number, number]>([0, 5, 0]);
+  const [trajectoryPoints, setTrajectoryPoints] = useState<[number, number, number][]>([]);
+  const [currentPosition, setCurrentPosition] = useState<[number, number, number]>([-6, 1.5, -3]);
 
-  // Simulate distance accumulation and status changes
+  // Generate trajectory path through the environment
+  const generateNextPoint = useCallback((progress: number): [number, number, number] => {
+    const t = progress;
+    
+    // Path through rooms: Room1 -> Room2 -> Corridor -> Room3
+    if (t < 0.3) {
+      // Moving through Room 1
+      const p = t / 0.3;
+      return [-6 + p * 6, 1.5, -3 + p * 8];
+    } else if (t < 0.5) {
+      // Moving through Room 2
+      const p = (t - 0.3) / 0.2;
+      return [0 + p * 3, 1.5, 5 + p * 7];
+    } else if (t < 0.7) {
+      // Moving through Corridor
+      const p = (t - 0.5) / 0.2;
+      return [3 - p * 3, 1.5, 12 + p * 8];
+    } else {
+      // Moving through Room 3
+      const p = (t - 0.7) / 0.3;
+      return [0 + Math.sin(p * Math.PI) * 3, 1.5, 20 + p * 5];
+    }
+  }, []);
+
+  // Simulate movement
   useEffect(() => {
+    let progress = 0;
+    const points: [number, number, number][] = [];
+    
     const interval = setInterval(() => {
-      setDistanceTraveled((prev) => prev + 0.1 + Math.random() * 0.05);
+      progress += 0.005;
+      if (progress > 1) progress = 0;
       
-      // Move rover along path
-      setRoverPosition((prev) => {
-        const newY = prev[1] + 0.02;
-        const x = Math.sin(newY * 0.3) * 3;
-        const z = Math.cos(newY * 0.3) * 3;
-        return [x, newY > 7 ? -7 : newY, z];
-      });
+      const newPos = generateNextPoint(progress);
+      setCurrentPosition(newPos);
+      
+      // Add to trajectory
+      points.push(newPos);
+      if (points.length > 200) points.shift();
+      setTrajectoryPoints([...points]);
+      
+      // Update distance
+      setDistanceTraveled(prev => prev + 0.08);
     }, 100);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [generateNextPoint]);
 
   // Simulate status changes
   useEffect(() => {
     const statusInterval = setInterval(() => {
       const rand = Math.random();
-      if (rand > 0.95) {
+      if (rand > 0.92) {
         setTrackingStatus("Loop Closure");
-        setTimeout(() => setTrackingStatus("Tracking"), 2000);
-      } else if (rand > 0.98) {
-        setTrackingStatus("Lost");
         setTimeout(() => setTrackingStatus("Tracking"), 1500);
       }
-    }, 3000);
+    }, 5000);
 
     return () => clearInterval(statusInterval);
   }, []);
 
+  const keyframeCount = Math.floor(trajectoryPoints.length / 8);
+
   return (
-    <div className="fixed inset-0 bg-background overflow-hidden touch-control">
-      {/* Scan line effect overlay */}
-      <div 
-        className="absolute inset-0 pointer-events-none z-20 opacity-[0.03]"
-        style={{
-          background: `repeating-linear-gradient(
-            0deg,
-            transparent,
-            transparent 2px,
-            hsl(var(--primary) / 0.1) 2px,
-            hsl(var(--primary) / 0.1) 4px
-          )`,
-        }}
-      />
-
-      {/* Vignette effect */}
-      <div 
-        className="absolute inset-0 pointer-events-none z-10"
-        style={{
-          background: `radial-gradient(ellipse at center, transparent 40%, hsl(var(--background)) 100%)`,
-        }}
-      />
-
-      {/* 3D SLAM Scene - takes 100% of screen */}
+    <div className="fixed inset-0 bg-[#1a1a1a] overflow-hidden touch-none select-none">
+      {/* 3D SLAM Map Scene */}
       <div className="absolute inset-0">
-        <SlamScene roverPosition={roverPosition} />
+        <SlamMapScene 
+          trajectoryPoints={trajectoryPoints}
+          currentPosition={currentPosition}
+        />
       </div>
 
-      {/* Minimal HUD overlays */}
-      <SlamOverlay 
+      {/* HUD Overlay */}
+      <SlamHUD 
         distanceTraveled={distanceTraveled}
         trackingStatus={trackingStatus}
+        keyframeCount={keyframeCount}
+        pointCount={8000}
       />
 
-      {/* Top border accent */}
-      <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
-      
-      {/* Bottom border accent */}
-      <div className="absolute bottom-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
+      {/* Corner accents */}
+      <div className="absolute top-0 left-0 w-8 h-8 border-l-2 border-t-2 border-cyan-500/30" />
+      <div className="absolute top-0 right-0 w-8 h-8 border-r-2 border-t-2 border-cyan-500/30" />
+      <div className="absolute bottom-0 left-0 w-8 h-8 border-l-2 border-b-2 border-cyan-500/30" />
+      <div className="absolute bottom-0 right-0 w-8 h-8 border-r-2 border-b-2 border-cyan-500/30" />
     </div>
   );
 };
